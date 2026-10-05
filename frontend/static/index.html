@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SousChef AI</title>
+<!-- Optional: used only to draw A2UI Icon components. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined">
+<style>
+  :root {
+    --accent:#e65100;
+    --accent-light:#fff3e0;
+    --bg:#fbf9f6;
+    --card-bg:#ffffff;
+    --border:#e2d7ce;
+    --text:#2c221e;
+    --text-muted:#8d7a71;
+    --shadow:rgba(0,0,0,0.05);
+  }
+  [data-theme="dark"] {
+    --accent:#ff6d00;
+    --accent-light:#3d2414;
+    --bg:#181412;
+    --card-bg:#241e1a;
+    --border:#3d322b;
+    --text:#f5ebe6;
+    --text-muted:#b3a097;
+    --shadow:rgba(0,0,0,0.3);
+  }
+
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--text); display:flex; flex-direction:column; height:100vh; transition:background 0.2s ease, color 0.2s ease; }
+  
+  header { background:linear-gradient(135deg, #e65100, #f57c00); color:#fff; padding:0.9rem 1.5rem; font-weight:700; font-size:1.2rem; letter-spacing:0.5px; box-shadow:0 2px 6px rgba(0,0,0,0.1); display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; }
+  header .subtitle { font-size:0.8rem; font-weight:400; opacity:0.9; }
+  header .header-actions { margin-left:auto; display:flex; gap:0.4rem; }
+  
+  .icon-btn { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:#fff; padding:0.35rem 0.7rem; border-radius:8px; font-size:0.8rem; font-weight:600; cursor:pointer; transition:background 0.2s ease; }
+  .icon-btn:hover { background:rgba(255,255,255,0.3); }
+
+  #log { flex:1; overflow-y:auto; padding:1.5rem 1rem; max-width:800px; width:100%; margin:0 auto; display:flex; flex-direction:column; gap:1.2rem; }
+  
+  .msg { display:flex; flex-direction:column; animation:fadeIn 0.25s ease-out; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+  
+  .msg-meta { font-size:0.75rem; color:var(--text-muted); margin-bottom:0.3rem; display:flex; align-items:center; gap:0.3rem; font-weight:600; }
+  .msg.user { align-items:flex-end; }
+  .msg.agent { align-items:flex-start; }
+  
+  .bubble { display:inline-block; padding:0.8rem 1.1rem; border-radius:16px; background:var(--card-bg); border:1px solid var(--border); text-align:left; max-width:85%; white-space:pre-wrap; line-height:1.5; font-size:0.95rem; box-shadow:0 2px 5px var(--shadow); color:var(--text); }
+  .msg.user .bubble { background:linear-gradient(135deg, #e65100, #ff6d00); color:#fff; border:none; border-bottom-right-radius:4px; box-shadow:0 3px 8px rgba(230,81,0,0.25); }
+  .msg.agent .bubble { border-bottom-left-radius:4px; }
+  
+  /* When the reply is an A2UI card, drop the bubble chrome so the card stands alone. */
+  .bubble.rich { background:transparent; border:none; padding:0; max-width:100%; white-space:normal; box-shadow:none; }
+  
+  /* Thinking indicator animation */
+  .thinking { font-style:italic; color:var(--text-muted); display:inline-flex; align-items:center; gap:4px; }
+  .dots span { animation: blink 1.4s infinite; opacity: 0; font-weight:bold; }
+  .dots span:nth-child(2) { animation-delay: .2s; }
+  .dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+
+  #examples { display:flex; gap:0.5rem; padding:0.6rem 1rem 0; justify-content:center; flex-wrap:wrap; max-width:800px; width:100%; margin:0 auto; }
+  .example-chip { background:var(--card-bg); border:1px solid var(--border); border-radius:20px; padding:0.45rem 0.9rem; font-size:0.85rem; color:var(--text); cursor:pointer; transition:all 0.2s ease; font-weight:500; box-shadow:0 1px 3px var(--shadow); }
+  .example-chip:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-light); transform:translateY(-1px); }
+  
+  form { display:flex; gap:0.6rem; padding:1rem 1.2rem; border-top:1px solid var(--border); background:var(--card-bg); max-width:800px; width:100%; margin:0 auto; box-shadow:0 -2px 10px var(--shadow); }
+  input { flex:1; padding:0.75rem 1rem; border:1px solid var(--border); border-radius:12px; font-size:0.95rem; outline:none; background:var(--bg); color:var(--text); transition:border 0.2s ease; }
+  input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-light); }
+  button.send-btn { padding:0.75rem 1.3rem; border:none; border-radius:12px; background:linear-gradient(135deg, #e65100, #ff6d00); color:#fff; font-weight:600; cursor:pointer; transition:opacity 0.2s ease; box-shadow:0 2px 6px rgba(230,81,0,0.2); }
+  button.send-btn:hover { opacity:0.92; }
+
+  /* --- A2UI component styles --- */
+  .a2card { border:1px solid var(--border); border-radius:14px; padding:1.1rem; background:var(--card-bg); box-shadow:0 2px 8px var(--shadow); max-width:100%; color:var(--text); }
+  .a2card + .a2card, .a2col > .a2card { margin-top:0.6rem; }
+  .a2col { display:flex; flex-direction:column; gap:0.5rem; }
+  .a2row { display:flex; flex-direction:row; gap:0.7rem; align-items:center; flex-wrap:wrap; }
+  .a2row.between { justify-content:space-between; }
+  .a2text { margin:0; line-height:1.5; color:var(--text); }
+  .a2text.a2-h1 { font-size:1.4rem; font-weight:700; color:var(--accent); }
+  .a2text.a2-h2 { font-size:1.2rem; font-weight:700; color:var(--text); }
+  .a2text.a2-h3 { font-size:1.05rem; font-weight:600; }
+  .a2text.a2-h4 { font-size:0.95rem; font-weight:600; }
+  .a2text.a2-caption { font-size:0.85rem; color:var(--text-muted); }
+  .a2divider { border:none; border-top:1px solid var(--border); margin:0.5rem 0; width:100%; }
+  .a2img { max-width:100%; border-radius:10px; display:block; box-shadow:0 2px 6px var(--shadow); cursor:zoom-in; transition:transform 0.2s ease; }
+  .a2img:hover { transform:scale(1.01); }
+  .material-symbols-outlined { font-family:'Material Symbols Outlined'; font-size:1.25rem; line-height:1; vertical-align:middle; color:var(--accent); }
+
+  /* Lightbox Modal */
+  .lightbox { display:none; position:fixed; z-index:9999; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(4px); align-items:center; justify-content:center; }
+  .lightbox.active { display:flex; animation:fadeIn 0.2s ease; }
+  .lightbox-content { max-width:90%; max-height:90%; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.5); object-fit:contain; }
+  .lightbox-close { position:absolute; top:20px; right:30px; font-size:2.5rem; color:#fff; cursor:pointer; font-weight:bold; }
+</style>
+</head>
+<body>
+<header>
+  <span>👨‍🍳 SousChef AI</span>
+  <span class="subtitle">AI Culinary Assistant</span>
+  <div class="header-actions">
+    <button type="button" class="icon-btn" onclick="exportChat()" title="Export Chat Log">📥 Export</button>
+    <button type="button" class="icon-btn" onclick="clearChat()" title="Clear Chat History">🗑️ Clear</button>
+    <button type="button" class="icon-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">🌙 Theme</button>
+  </div>
+</header>
+
+<div id="log"></div>
+
+<div id="examples">
+  <button type="button" class="example-chip" onclick="sendPrompt('Find Italian pasta recipes')">🍝 Italian Recipes</button>
+  <button type="button" class="example-chip" onclick="sendPrompt('Check my pantry inventory')">🍳 Pantry Check</button>
+  <button type="button" class="example-chip" onclick="sendPrompt('Scale recipe to 6 servings')">📏 Scale Recipe</button>
+  <button type="button" class="example-chip" onclick="sendPrompt('Generate an image of Creamy Alfredo pasta')">🖼️ Visualizer</button>
+  <button type="button" class="example-chip" onclick="sendPrompt('Find nearby grocery stores')">🛒 Nearby Stores</button>
+  <button type="button" class="example-chip" onclick="sendPrompt('30-minute quick dinner ideas')">⏱️ Quick Meals</button>
+</div>
+
+<form id="form">
+  <input id="input" placeholder="Ask SousChef AI anything…" autocomplete="off" autofocus>
+  <button class="send-btn">Send</button>
+</form>
+
+<!-- Lightbox Modal for AI Dish Images -->
+<div id="lightbox" class="lightbox" onclick="closeLightbox()">
+  <span class="lightbox-close">&times;</span>
+  <img id="lightbox-img" class="lightbox-content" src="" alt="Zoomed view">
+</div>
+
+<script>
+const log = document.getElementById("log");
+const form = document.getElementById("form");
+const input = document.getElementById("input");
+
+function sendPrompt(text) {
+  input.value = text;
+  form.dispatchEvent(new Event("submit", { cancelable: true }));
+}
+
+function clearChat() {
+  log.innerHTML = "";
+}
+
+function exportChat() {
+  const msgs = document.querySelectorAll(".msg");
+  if (!msgs.length) return alert("No chat messages to export.");
+  let text = "SousChef AI - Conversation Export\n=================================\n\n";
+  msgs.forEach(m => {
+    const meta = m.querySelector(".msg-meta")?.textContent || "";
+    const body = m.querySelector(".bubble")?.textContent || "";
+    text += `${meta}\n${body}\n---------------------------------\n`;
+  });
+  const blob = new Blob([text], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `souschef-chat-${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+}
+
+function toggleTheme() {
+  const current = document.body.getAttribute("data-theme");
+  const next = current === "dark" ? "light" : "dark";
+  document.body.setAttribute("data-theme", next);
+  localStorage.setItem("theme", next);
+  document.getElementById("theme-toggle").textContent = next === "dark" ? "☀️ Light" : "🌙 Theme";
+}
+
+// Lightbox modal logic
+function openLightbox(src) {
+  const lb = document.getElementById("lightbox");
+  const img = document.getElementById("lightbox-img");
+  img.src = src;
+  lb.classList.add("active");
+}
+function closeLightbox() {
+  document.getElementById("lightbox").classList.remove("active");
+}
+
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+function bubble(who) {
+  const m = el("div", "msg " + who);
+  const meta = el("div", "msg-meta", who === "user" ? "You 👤" : "👨‍🍳 SousChef AI");
+  const b = el("div", "bubble");
+  m.appendChild(meta);
+  m.appendChild(b);
+  log.appendChild(m);
+  log.scrollTop = log.scrollHeight;
+  return b;
+}
+
+// A2UI mini-renderer
+function boundStr(v) {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v.literalString === "string") return v.literalString;
+  return "";
+}
+
+function childIds(props) {
+  const ids = [];
+  if (props && typeof props.child === "string") ids.push(props.child);
+  const ch = props && props.children;
+  if (ch && Array.isArray(ch.explicitList)) for (const c of ch.explicitList) if (typeof c === "string") ids.push(c);
+  return ids;
+}
+
+function iconName(n) { return String(n || "").replace(/([a-z0-9])([A-Z])/g, "$1_$2").replace(/\s+/g, "_").toLowerCase(); }
+
+function buildNode(id, comps, seen) {
+  if (!id || seen.has(id)) return null;
+  seen.add(id);
+  const spec = comps[id];
+  if (!spec || typeof spec !== "object") return null;
+  const type = Object.keys(spec)[0];
+  const props = spec[type] || {};
+  const kids = () => childIds(props).map(cid => buildNode(cid, comps, seen)).filter(Boolean);
+
+  switch (type) {
+    case "Card": {
+      const d = el("div", "a2card"); kids().forEach(n => d.appendChild(n)); return d;
+    }
+    case "Column":
+    case "List": {
+      const horizontal = type === "List" && props.direction === "horizontal";
+      const d = el("div", horizontal ? "a2row" : "a2col"); kids().forEach(n => d.appendChild(n)); return d;
+    }
+    case "Row": {
+      const d = el("div", "a2row" + (props.distribution === "spaceBetween" ? " between" : ""));
+      kids().forEach(n => d.appendChild(n)); return d;
+    }
+    case "Text": {
+      const t = el("div", "a2text");
+      const hint = String(props.usageHint || "body").toLowerCase();
+      if (["h1", "h2", "h3", "h4", "h5", "h6"].includes(hint)) t.classList.add("a2-" + hint);
+      else if (hint === "caption") t.classList.add("a2-caption");
+      t.textContent = boundStr(props.text);
+      return t;
+    }
+    case "Divider":
+      return el("hr", "a2divider");
+    case "Image": {
+      const src = boundStr(props.url || props.src);
+      if (!/^https?:\/\//i.test(src)) return null;
+      const img = el("img", "a2img"); img.src = src; img.alt = boundStr(props.alt) || "";
+      img.onclick = (e) => { e.stopPropagation(); openLightbox(src); };
+      return img;
+    }
+    case "Icon": {
+      const s = el("span", "material-symbols-outlined"); s.textContent = iconName(boundStr(props.name) || props.name); return s;
+    }
+    default:
+      return null;
+  }
+}
+
+function renderSurface(messages, container) {
+  const comps = {};
+  const roots = [];
+  for (const m of messages) {
+    if (m.beginRendering && typeof m.beginRendering.root === "string") roots.push(m.beginRendering.root);
+    const su = m.surfaceUpdate;
+    if (su && Array.isArray(su.components)) for (const c of su.components) if (c && c.id && c.component) comps[c.id] = c.component;
+  }
+  let rootIds = roots.filter(r => comps[r]);
+  if (rootIds.length === 0) {
+    const referenced = new Set();
+    for (const id in comps) { const spec = comps[id]; childIds(spec[Object.keys(spec)[0]] || {}).forEach(c => referenced.add(c)); }
+    rootIds = Object.keys(comps).filter(id => !referenced.has(id));
+  }
+  let drew = false;
+  for (const rid of rootIds) { const node = buildNode(rid, comps, new Set()); if (node) { container.appendChild(node); drew = true; } }
+  return drew;
+}
+
+function flattenText(messages) {
+  const out = [];
+  for (const m of messages) {
+    const su = m.surfaceUpdate;
+    if (su && Array.isArray(su.components)) for (const c of su.components) if (c && c.component && c.component.Text) out.push(boundStr(c.component.Text.text));
+  }
+  return out.join("\n").trim();
+}
+
+function renderReply(b, parts) {
+  b.textContent = "";
+  const texts = parts.filter(p => p && (p.kind === "text" || (!p.kind && p.text))).map(p => p.text || "");
+  const a2ui = parts.filter(p => p && p.kind === "a2ui" && p.data).map(p => p.data);
+
+  const textStr = texts.join("\n").trim();
+  if (textStr) b.appendChild(el("div", null, textStr));
+
+  if (a2ui.length) {
+    b.classList.add("rich");
+    if (!renderSurface(a2ui, b)) b.appendChild(el("div", null, flattenText(a2ui) || "(no card content)"));
+  }
+  if (!b.childNodes.length) b.textContent = "(no response)";
+  log.scrollTop = log.scrollHeight;
+}
+
+form.addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const text = input.value.trim();
+  if (!text) return;
+  bubble("user").textContent = text;
+  input.value = "";
+  const b = bubble("agent");
+  b.innerHTML = '<span class="thinking">👨‍🍳 Cooking up a response<span class="dots"><span>.</span><span>.</span><span>.</span></span></span>';
+  try {
+    const res = await fetch("/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
+    const raw = await res.text();
+    let data;
+    try { data = JSON.parse(raw); }
+    catch { throw new Error(`Server returned non-JSON (HTTP ${res.status}). ${raw.slice(0, 300)}`); }
+    renderReply(b, data.parts || []);
+  } catch (e) {
+    b.textContent = "Error: " + e.message;
+  }
+});
+
+// Restore theme setting if saved
+(function() {
+  const saved = localStorage.getItem("theme");
+  if (saved === "dark") {
+    document.body.setAttribute("data-theme", "dark");
+    document.addEventListener("DOMContentLoaded", () => {
+      const btn = document.getElementById("theme-toggle");
+      if (btn) btn.textContent = "☀️ Light";
+    });
+  }
+})();
+</script>
+</body>
+</html>
